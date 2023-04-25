@@ -1,0 +1,52 @@
+.container{
+    height: 95vh;
+    width: 100%;
+    margin-top: 20px;
+}
+.header{
+    display: flex;
+    height: 80px;
+    padding: 20px 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+}
+.header .input{
+    max-width: 65vw;
+}
+.header .prefix{
+    font-size: 20px;
+}
+
+.video{
+    display: block;
+    width: calc(100% - 30px);
+    height: 100%;
+    margin-right: 30px;
+}
+
+.controlTitle{
+    font-size: 30px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 10px 5px;
+    padding: 5px 0;
+    background-color: #f4f4f4;
+    border-radius: 5px;
+}
+
+.options{
+    width: calc(100% - 24px);
+    margin: 10px 12px;
+    padding: 5px 0;
+}
+.options .option{
+    width: 100%;
+    display: inline-flex;
+    justify-content: space-between;
+    align-items: center;
+    top: 0!important;
+    overflow: hidden;
+}
