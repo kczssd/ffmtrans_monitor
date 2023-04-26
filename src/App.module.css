@@ -17,7 +17,9 @@
 .header .prefix{
     font-size: 20px;
 }
-
+.main{
+    height: calc(95vh - 80px);
+}
 .video{
     display: block;
     width: calc(100% - 30px);

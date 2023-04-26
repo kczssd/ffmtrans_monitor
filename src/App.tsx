@@ -6,35 +6,70 @@ import Styles from "./App.module.css"
 
 const Sider = Layout.Sider;
 const Header = Layout.Header;
-const Footer = Layout.Footer;
 const Content = Layout.Content;
-const Group = Checkbox.Group;
 
+// localhost:8080/live?app=ffmtrans&stream=test
 const App = () => {
   const monitor = useRef<HTMLVideoElement>(null);
   const player = useRef<flvjs.Player>();
   const [collapsed, setCollapsed] = useState<boolean>(true);
-  const [inputUrl, setInputUrl] = useState("localhost:8080/live?app=ffmtrans&stream=test");
   const [mediaDataSource, setMediaDataSource] = useState<flvjs.MediaDataSource>({ type: "flv", isLive: true, hasAudio: true, hasVideo: true });
 
-  function play() {
-    console.log("player!", player.current);
-    if (player.current) {
-      console.log("player!")
-      player.current.load();
-      player.current.play();
-    }
-  }
-
-  useEffect(() => {
-    console.log("flvjs.isSupported,", flvjs.isSupported(), monitor.current, mediaDataSource);
+  function init() {
     if (monitor.current) {
+      console.log(mediaDataSource)
       let flvPlayer = flvjs.createPlayer(mediaDataSource);
       flvPlayer.attachMediaElement(monitor.current);
       player.current = flvPlayer;
     }
-    return () => {
+  }
+
+  function load() {
+    if (player.current) {
+      player.current.load();
+    } else {
+      init();
+      load();
+    }
+  }
+
+  function play() {
+    if (player.current) {
+      player.current.play();
+    }
+  }
+
+  function pause() {
+    if (player.current) {
+      player.current.pause();
+    }
+  }
+
+  function destroy() {
+    if (player.current) {
+      player.current.pause();
+      player.current?.unload();
+      player.current?.detachMediaElement();
       player.current?.destroy();
+      player.current = undefined;
+    }
+  }
+
+  function handleInput(v: string) {
+    let httpReg = new RegExp(/^http:\/\//);
+    if (httpReg.test(v)) {
+      setMediaDataSource((o) => ({ ...o, url: v }));
+    } else {
+      v = "http://" + v;
+      setMediaDataSource((o) => ({ ...o, url: v }));
+    }
+  }
+
+  useEffect(() => {
+    console.log("rerender")
+    init();
+    return () => {
+      destroy();
     }
   }, [monitor, mediaDataSource])
 
@@ -42,11 +77,11 @@ const App = () => {
     <Layout className={Styles.container}>
       <Header className={Styles.header}>
         <div style={{ flex: "1 0 auto" }} className={Styles.prefix}>Stream URL:</div>
-        <Input className={Styles.input} size='large' addBefore="http://" placeholder='input rtmp-flv url' allowClear value={inputUrl} onChange={(v) => { setInputUrl(v); setMediaDataSource((o) => ({ ...o, url: v })) }} />
-        <Button type="primary" size="large" onClick={() => { }}>Load</Button>
-        <Button type="primary" status="success" size="large" onClick={() => { }}>Play</Button>
-        <Button size="large" onClick={() => { }}>Pause</Button>
-        <Button size="large" status="danger" onClick={() => { }}>stop</Button>
+        <Input className={Styles.input} size='large' addBefore="http://" placeholder='input rtmp-flv url' allowClear onChange={handleInput} />
+        <Button type="primary" size="large" onClick={load}>Load</Button>
+        <Button type="primary" status="success" size="large" onClick={play}>Play</Button>
+        <Button size="large" onClick={pause}>Pause</Button>
+        <Button size="large" status="danger" onClick={destroy}>stop</Button>
       </Header>
       <Layout className={Styles.main}>
         <Content className={Styles.content}>
