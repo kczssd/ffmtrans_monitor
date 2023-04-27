@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from 'react'
+import { useRef, useState, useEffect, useCallback } from 'react'
 import flvjs from "flv.js"
 import { Input, Button, Layout, Checkbox, Typography, Space } from "@arco-design/web-react"
 import { IconCaretRight, IconCaretLeft, IconSettings } from '@arco-design/web-react/icon';
@@ -17,7 +17,6 @@ const App = () => {
 
   function init() {
     if (monitor.current) {
-      console.log(mediaDataSource)
       let flvPlayer = flvjs.createPlayer(mediaDataSource);
       flvPlayer.attachMediaElement(monitor.current);
       player.current = flvPlayer;
@@ -72,6 +71,25 @@ const App = () => {
       destroy();
     }
   }, [monitor, mediaDataSource])
+
+  // clean delay
+  // useEffect(() => {
+  //   let cleanBuff = setInterval(() => {
+  //     console.log(player.current?.buffered)
+  //     if (player.current?.buffered.length) {
+  //       let end = player.current.buffered.end(0);
+  //       let diff = end - player.current.currentTime;;
+  //       console.log(end, player.current.currentTime)
+  //       if (diff > 0.15) {
+  //         player.current.currentTime = end - 0.1
+  //       }
+  //     }
+  //   }, 30000);
+  //   return () => {
+  //     console.log("clean")
+  //     clearInterval(cleanBuff);
+  //   }
+  // }, [])
 
   return (
     <Layout className={Styles.container}>
