@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect, useCallback } from 'react'
 import flvjs from "flv.js"
-import { Input, Button, Layout, Checkbox, Typography, Space } from "@arco-design/web-react"
+import { Input, Button, Layout, Checkbox, Typography, Space, Divider, InputTag, Switch, Message } from "@arco-design/web-react"
 import { IconCaretRight, IconCaretLeft, IconSettings } from '@arco-design/web-react/icon';
 import Styles from "./App.module.css"
 
@@ -10,10 +10,12 @@ const Content = Layout.Content;
 
 // localhost:8080/live?app=ffmtrans&stream=test
 const App = () => {
-  const monitor = useRef<HTMLVideoElement>(null);
-  const player = useRef<flvjs.Player>();
-  const [collapsed, setCollapsed] = useState<boolean>(true);
-  const [mediaDataSource, setMediaDataSource] = useState<flvjs.MediaDataSource>({ type: "flv", isLive: true, hasAudio: true, hasVideo: true });
+  const monitor = useRef<HTMLVideoElement>(null); // video 标签
+  const player = useRef<flvjs.Player>(); // flv.js 播放器实例
+  const [collapsed, setCollapsed] = useState<boolean>(true); // 设置面板是否折叠
+  const [mediaDataSource, setMediaDataSource] = useState<flvjs.MediaDataSource>({ type: "flv", isLive: true, hasAudio: true, hasVideo: true }); // 播放器设置
+  const [withOSD, setWithOSD] = useState(true); // 是否开启过滤器
+  const [filterGraph, setFilterGraph] = useState<string[]>(["drawtext=fontcolor=red:fontsize=20:x=5:y=5:text='%{localtime\\:%Y-%m-%d %H.%M.%S}'"]); // 滤镜信息
 
   function init() {
     if (monitor.current) {
@@ -64,42 +66,87 @@ const App = () => {
     }
   }
 
+  async function changeOSD(withOSD: boolean, filterGraph: string[]) {
+    if (withOSD && filterGraph.length > 0) {
+      let res = await fetch("http://127.0.0.1:3000/setosd", {
+        method: "POST",
+        body: JSON.stringify({ osd: filterGraph.join(",") }),
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+      let msg = await res.text();
+      Message.success("后台ffmtrans_with_filter成功启动");
+    } else {
+      let res = await fetch("http://127.0.0.1:3000/setosd", {
+        method: "POST",
+        body: JSON.stringify({ osd: "" }),
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+      let msg = await res.text();
+      Message.success("后台ffmtrans_remux成功启动");
+    }
+  }
+
+  async function closeOSD() {
+    let res = await fetch("http://127.0.0.1:3000/close", {
+      method: "GET",
+      keepalive: true
+    })
+    let msg = await res.text();
+    return msg;
+  }
+
   useEffect(() => {
-    console.log("rerender")
+    const handleClose = async (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      await closeOSD();
+    }
+    window.addEventListener("beforeunload", handleClose);
+    return () => {
+      window.removeEventListener("beforeunload", handleClose);
+    }
+  }, [])
+
+  useEffect(() => {
+    changeOSD(withOSD, filterGraph);
+    return () => {
+      destroy();
+    }
+  }, [withOSD, filterGraph])
+
+  useEffect(() => {
     init();
+    Message.success("播放器初始化完成");
     return () => {
       destroy();
     }
   }, [monitor, mediaDataSource])
 
-  // clean delay
-  // useEffect(() => {
-  //   let cleanBuff = setInterval(() => {
-  //     console.log(player.current?.buffered)
-  //     if (player.current?.buffered.length) {
-  //       let end = player.current.buffered.end(0);
-  //       let diff = end - player.current.currentTime;;
-  //       console.log(end, player.current.currentTime)
-  //       if (diff > 0.15) {
-  //         player.current.currentTime = end - 0.1
-  //       }
-  //     }
-  //   }, 30000);
-  //   return () => {
-  //     console.log("clean")
-  //     clearInterval(cleanBuff);
-  //   }
-  // }, [])
 
   return (
     <Layout className={Styles.container}>
       <Header className={Styles.header}>
         <div style={{ flex: "1 0 auto" }} className={Styles.prefix}>Stream URL:</div>
         <Input className={Styles.input} size='large' addBefore="http://" placeholder='input rtmp-flv url' allowClear onChange={handleInput} />
-        <Button type="primary" size="large" onClick={load}>Load</Button>
-        <Button type="primary" status="success" size="large" onClick={play}>Play</Button>
-        <Button size="large" onClick={pause}>Pause</Button>
-        <Button size="large" status="danger" onClick={destroy}>stop</Button>
+        <Button type="primary" size="large" onClick={() => {
+          load();
+          Message.success("播放器加载完成");
+        }}>Load</Button>
+        <Button type="primary" status="success" size="large" onClick={() => {
+          play();
+          Message.success("播放器继续播放");
+        }}>Play</Button>
+        <Button size="large" onClick={() => {
+          pause();
+          Message.success("播放器暂停");
+        }}>Pause</Button>
+        <Button size="large" status="danger" onClick={() => {
+          destroy();
+          Message.success("播放器销毁完成");
+        }}>stop</Button>
       </Header>
       <Layout className={Styles.main}>
         <Content className={Styles.content}>
@@ -111,6 +158,9 @@ const App = () => {
             <Checkbox className={Styles.option} onChange={(b) => setMediaDataSource((o) => ({ ...o, isLive: b }))} checked={mediaDataSource.isLive}>Is Stream</Checkbox>
             <Checkbox className={Styles.option} onChange={(b) => setMediaDataSource((o) => ({ ...o, hasVideo: b }))} checked={mediaDataSource.hasVideo}>Has Video</Checkbox>
             <Checkbox className={Styles.option} onChange={(b) => setMediaDataSource((o) => ({ ...o, hasAudio: b }))} checked={mediaDataSource.hasAudio}>Has Audio</Checkbox>
+            <Divider></Divider>
+            <Checkbox className={Styles.option} onChange={(v) => { setWithOSD(v) }} checked={withOSD}>With OSD</Checkbox>
+            <InputTag onChange={(value) => { setFilterGraph(value) }} value={filterGraph} onFocus={() => setCollapsed(false)} placeholder='filter1,filter2,...' tokenSeparators={[',']} />
           </div>
         </Sider>
       </Layout>
